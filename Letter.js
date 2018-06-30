@@ -1,11 +1,3 @@
-// 1. Ask for shape, number of words or words and difficulty
-// 2. Validate arguments
-// 3. Calculate optimal size
-// 4. For each word choose a random direction (depends on difficulty) and a random spot
-// 5. Fill the rest of the array with most used letters in the words provided or in the
-//    whole alphabet (depends on difficulty)
-// 6. Avoid generating duplicates in previous step for words bigger than 2 or 3 letters
-
 function getIndex(row, col) {
     return row * size + col;
 }
@@ -16,6 +8,7 @@ function getLocation(index) {
     return {row, col};
 }
 
+// Returns the next cell in a given direction
 function nextLocation(row, col, direction) {
     switch(direction) {
         case 0:
@@ -50,6 +43,40 @@ function nextLocation(row, col, direction) {
     return {row, col};
 }
 
+// Fills the array with random letters
+function fill(words) {
+    const text = words.join("");
+    var frequency = new Array(alphabet.length).fill(1);
+    var sum = alphabet.length;
+    for (index = 0; index < text.length; index++) {
+        for (letter = 0; letter < alphabet.length; letter++) {
+            if (alphabet[letter] === text[index]) {
+                frequency[letter]++;
+                sum++;
+                break;
+            }
+        }
+    }
+
+    for (var index = 0; index < area; index++) {
+        var pos = getLocation(index);
+        if (alphabetSoup[pos.row][pos.col] === 0) {
+            var choice = 1 + Math.trunc(Math.random() * sum);
+            alphabetSoup[pos.row][pos.col] = letterFill(choice, frequency);
+        }
+    }
+}
+
+function letterFill(choice, frequency) {
+    var sum = 0;
+    for (var index = 0; index < frequency.length; index++) {
+        sum += frequency[index];
+        if (sum >= choice) {
+            return alphabet[index];
+        }
+    }
+}
+
 // Generates an optimal size for the alphabet soup
 function getSize() {
     var characters = input.length - 2 * (words.length - 1);
@@ -59,7 +86,7 @@ function getSize() {
             maxLength = words[word].length;
         }
     }
-    var size = Math.ceil(Math.sqrt(characters * 1.5));
+    var size = Math.ceil(Math.sqrt(characters * 2));
     if (size < maxLength) {
         size = maxLength;
     }
@@ -89,6 +116,7 @@ function getDirection() {
     return Math.trunc(Math.random() * 8);
 }
 
+// Returns if a given word can be placed in a given position in a determined direction
 function canPlace(p) {
     var pos = getLocation(p.openLocations[p.choice]);
     for (length = 0; length < p.word.length; length++) {
@@ -113,6 +141,7 @@ function tryAgain(available) {
     return Math.trunc(Math.random() * available);
 }
 
+// Recursively calls itself to check if a word can be placed in a position in any given direction
 function placement(parameters) {
     if (canPlace(parameters)) {
         writeWord(parameters);
@@ -122,14 +151,19 @@ function placement(parameters) {
         return placement(parameters);
     } else {
         parameters.direction = (parameters.direction + 1) % 8;
-        return placeWord(parameters.word, parameters.direction);
+        if (parameters.firstDirection === parameters.direction) {
+            console.log("Failed to build");
+            return -1;
+        }
+        return placeWord(parameters.word, parameters.direction, parameters.firstDirection);
     }
 }
 
 // Places a word in the alphabet soup
-function placeWord(word, direction = undefined) {
+function placeWord(word, direction = undefined, firstDirection) {
     if (direction === undefined) {
         direction = getDirection();
+        firstDirection = direction;
     }
     var locations = generateArray();
     var unavailable = 0;
@@ -197,22 +231,46 @@ function placeWord(word, direction = undefined) {
     }
 
     var choice = tryAgain(available);
-    var parameters = {choice, openLocations, word, direction, locationsToRemove, available};
+    var parameters = {choice, openLocations, word, direction, locationsToRemove, available, firstDirection};
 
-    placement(parameters);
+    error = placement(parameters);
+    if (error === -1) {
+        return -1;
+    }
+
+    return firstDirection;
 }
 
 // Main
+
 const constants = {left: [0, 2, 3], right: [4, 6, 7], up: [1, 2, 6], down: [3, 5, 7]};
+const alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 const input = "ELEPHANT, CAT, DOG, MOUSE, SNAKE, HEN, CHICKEN, HORSE, RABBIT, SHEEP, WOLF, DOLPHIN, EAGLE, PANDA, PENGUIN";
 var words = input.split(", ");
 const size = getSize();
 const area = size * size;
 var alphabetSoup = generateArray();
+var firstDirection = undefined;
+
+/*
+EASY: Only directions 1 & 2.
+MEDIUM: Only directions 1 to 4.
+HARD: All directions
+*/
+const difficulty = "HARD";
+
 for (word = 0; word < words.length; word++) {
-    placeWord(words[word]);
+    firstDirection = placeWord(words[word], undefined, firstDirection);
+    if (firstDirection === -1) {
+        break;
+    }
 }
 
-for (var row = 0; row < size; row++) {
-    console.log(alphabetSoup[row]);
+if (firstDirection !== -1) {
+    fill(words);
+
+    // Output result
+    for (var row = 0; row < size; row++) {
+        console.log(alphabetSoup[row]);
+    }
 }
