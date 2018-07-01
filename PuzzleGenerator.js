@@ -1,3 +1,7 @@
+function getIndex(row, col) {
+    return row * constants.size + col;
+}
+
 function getLocation(index) {
     var row = Math.trunc(index / constants.size);
     var col = index % constants.size;
@@ -89,6 +93,21 @@ function getSize() {
     return size;
 }
 
+
+/* Shapes
+0: Square
+1: Circle
+*/
+function generateShape(locations) {
+    switch(config.shape) {
+        case "0":
+            return locations;
+        case "1":
+            return circleShape(locations);
+    }
+}
+
+
 // Initializes array to 0
 function generateArray() {
     var array = Array(constants.size).fill(0);
@@ -163,6 +182,7 @@ function placeWord(word, direction, firstDirection) {
         firstDirection = direction;
     }
     var locations = generateArray();
+    locations = generateShape(locations);
     var unavailable = 0;
 
     // Array that tracks the open locations
@@ -175,48 +195,67 @@ function placeWord(word, direction, firstDirection) {
     // Marks all the impossible spots (out of the array limit)
     for (var index = 0; index < 3; index++) {
         if (constants.directions.left[index] === direction) {
-            for (var notPossible = 0; notPossible < constants.size; notPossible++) {
-                for (length = 0; length < word.length - 1; length++) {
-                    if (locations[notPossible][constants.size - 1 - length] === 0) {
-                        locations[notPossible][constants.size - 1 - length] = 1;
-                        unavailable++;
-                        locationsToRemove.push(notPossible * constants.size + constants.size - 1 - length);
+            for (var row = 0; row < constants.size; row++) {
+                for (var col = 0; col < constants.size; col++) {
+                    for (var next = 0; next < word.length; next++) {
+                        if (locations[row][col] === "") {
+                            break;
+                        } else if ((locations[row][col + next] === undefined || locations[row][col + next] === "") && locations[row][col] === 0) {
+                            locations[row][col] = 1;
+                            locationsToRemove.push(getIndex(row, col));
+                            unavailable++;
+                            break;
+                        }
                     }
                 }
             }
         } else if (constants.directions.right[index] === direction) {
-            for (var notPossible = 0; notPossible < constants.size; notPossible++) {
-                for (length = 0; length < word.length - 1; length++) {
-                    if (locations[notPossible][length] === 0) {
-                        locations[notPossible][length] = 1;
-                        unavailable++;
-                        locationsToRemove.push(notPossible * constants.size + length);
+            for (var row = 0; row < constants.size; row++) {
+                for (var col = 0; col < constants.size; col++) {
+                    for (var next = 0; next < word.length; next++) {
+                        if (locations[row][col] === "") {
+                            break;
+                        } else if ((locations[row][col - next] === undefined || locations[row][col - next] === "") && locations[row][col] === 0) {
+                            locations[row][col] = 1;
+                            locationsToRemove.push(getIndex(row, col));
+                            unavailable++;
+                            break;
+                        }
                     }
                 }
             }
         } if (constants.directions.up[index] === direction) {
-            for (var notPossible = 0; notPossible < constants.size; notPossible++) {
-                for (length = 0; length < word.length - 1; length++) {
-                    if (locations[constants.size - 1 - length][notPossible] === 0) {
-                        locations[constants.size - 1 - length][notPossible] = 1;
-                        unavailable++;
-                        locationsToRemove.push((constants.size - 1 - length) * constants.size + notPossible);
+            for (var row = 0; row < constants.size; row++) {
+                for (var col = 0; col < constants.size; col++) {
+                    for (var next = 0; next < word.length; next++) {
+                        if (locations[row][col] === "") {
+                            break;
+                        } else if ((locations[row + next] === undefined || locations[row + next][col] === undefined || locations[row + next][col] === "") && locations[row][col] === 0) {
+                            locations[row][col] = 1;
+                            locationsToRemove.push(getIndex(row, col));
+                            unavailable++;
+                            break;
+                        }
                     }
                 }
             }
         } else if (constants.directions.down[index] === direction) {
-            for (var notPossible = 0; notPossible < constants.size; notPossible++) {
-                for (length = 0; length < word.length - 1; length++) {
-                    if (locations[length][notPossible] === 0) {
-                        locations[length][notPossible] = 1;
-                        unavailable++;
-                        locationsToRemove.push(length * constants.size + notPossible);
+            for (var row = 0; row < constants.size; row++) {
+                for (var col = 0; col < constants.size; col++) {
+                    for (var next = 0; next < word.length; next++) {
+                        if (locations[row][col] === "") {
+                            break;
+                        } else if ((locations[row - next] === undefined || locations[row - next][col] === undefined || locations[row - next][col] === "") && locations[row][col] === 0) {
+                            locations[row][col] = 1;
+                            locationsToRemove.push(getIndex(row, col));
+                            unavailable++;
+                            break;
+                        }
                     }
                 }
             }
         }
     }
-
     var available = constants.area - unavailable;
     var choice = tryAgain(available);
 
@@ -247,7 +286,8 @@ function validateDifficulty() {
     MEDIUM: Medium array and only directions 1 to 4.
     HARD: Big array and all directions.
     */
-    const difficulty = readlineSync.question("Enter the desired difficulty: \n 0. EASY \n 1. MEDIUM \n 2. HARD \n");
+    //const difficulty = readlineSync.question("Enter the desired difficulty: \n 0. EASY \n 1. MEDIUM \n 2. HARD \n");
+    const difficulty = "1";
     if ((difficulty !== "0" && difficulty !== "1" && difficulty !== "2")) {
         console.log("Please enter a valid argument.\n");
         return validateDifficulty();
@@ -269,8 +309,9 @@ function validateDifficulty() {
 }
 
 function validateWords() {
-    var words = readlineSync.question("Enter the words separated by comma and space, for example: HELLO, WORLD \n").toUpperCase();
-    var string = words.split(", ").join("");
+    //var words = readlineSync.question("Enter the words separated by comma and space, for example: HELLO, WORLD \n").toUpperCase();
+    var words = "BLACK, BLUE, RED";
+    const string = words.split(", ").join("");
     for (var index = 0; index < string.length; index++) {
         var found = false;
         for (var letter = 0; letter < constants.alphabet.length; letter++) {
@@ -292,6 +333,7 @@ function validateWords() {
 
 const constants = {};
 const config = {};
+config.shape = "0";
 constants.directions = {left: [0, 2, 3], right: [4, 6, 7], up: [1, 2, 6], down: [3, 5, 7]};
 constants.alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 const readlineSync = require('readline-sync');
