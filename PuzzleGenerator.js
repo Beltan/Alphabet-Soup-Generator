@@ -87,23 +87,44 @@ function getSize() {
         }
     }
     var size = Math.ceil(Math.sqrt(characters * config.size));
+    if (config.shape === '1') {
+        size = Math.round(2 * Math.sqrt(size * size / Math.PI));
+    }
     if (size < maxLength) {
         size = maxLength;
     }
     return size;
 }
 
+function circleShape(alphabetSoup) {
+    function distance(row, col) {
+        if (Math.sqrt(Math.pow(row - rad, 2) + Math.pow(col - rad, 2)) - rad < 0.5) {
+            return true;
+        }
+        return false;
+    }
+    const rad = Math.round(10 * (constants.size - 1) / 2) / 10;
+    for (var row = 0; row < constants.size; row++) {
+        for (var col = 0; col < constants.size; col++) {
+            if (!distance(row, col)) {
+                alphabetSoup[row][col] = " ";
+                constants.empty++;
+            }
+        }
+    }
+    return alphabetSoup;
+}
 
 /* Shapes
 0: Square
 1: Circle
 */
-function generateShape(locations) {
+function generateShape(alphabetSoup) {
     switch(config.shape) {
         case "0":
-            return locations;
+            return alphabetSoup;
         case "1":
-            return circleShape(locations);
+            return circleShape(alphabetSoup);
     }
 }
 
@@ -170,20 +191,19 @@ function placement(parameters, alphabetSoup) {
             console.log("Failed to build");
             return -1;
         }
-        parameters = placeWord(parameters.word, parameters.direction, parameters.firstDirection);
+        parameters = placeWord(parameters.word, parameters.direction, parameters.firstDirection, alphabetSoup);
         return placement(parameters, alphabetSoup);
     }
 }
 
 // Places a word in the alphabet soup
-function placeWord(word, direction, firstDirection) {
+function placeWord(word, direction, firstDirection, alphabetSoup) {
     if (direction === undefined) {
         direction = getDirection();
         firstDirection = direction;
     }
     var locations = generateArray();
-    locations = generateShape(locations);
-    var unavailable = 0;
+    var unavailable = constants.empty;
 
     // Array that tracks the open locations
     var openLocations = [];
@@ -198,9 +218,9 @@ function placeWord(word, direction, firstDirection) {
             for (var row = 0; row < constants.size; row++) {
                 for (var col = 0; col < constants.size; col++) {
                     for (var next = 0; next < word.length; next++) {
-                        if (locations[row][col] === "") {
+                        if (alphabetSoup[row][col] === " ") {
                             break;
-                        } else if ((locations[row][col + next] === undefined || locations[row][col + next] === "") && locations[row][col] === 0) {
+                        } else if ((locations[row][col + next] === undefined || alphabetSoup[row][col + next] === " ") && locations[row][col] === 0) {
                             locations[row][col] = 1;
                             locationsToRemove.push(getIndex(row, col));
                             unavailable++;
@@ -213,9 +233,9 @@ function placeWord(word, direction, firstDirection) {
             for (var row = 0; row < constants.size; row++) {
                 for (var col = 0; col < constants.size; col++) {
                     for (var next = 0; next < word.length; next++) {
-                        if (locations[row][col] === "") {
+                        if (alphabetSoup[row][col] === " ") {
                             break;
-                        } else if ((locations[row][col - next] === undefined || locations[row][col - next] === "") && locations[row][col] === 0) {
+                        } else if ((locations[row][col - next] === undefined || alphabetSoup[row][col - next] === " ") && locations[row][col] === 0) {
                             locations[row][col] = 1;
                             locationsToRemove.push(getIndex(row, col));
                             unavailable++;
@@ -228,9 +248,9 @@ function placeWord(word, direction, firstDirection) {
             for (var row = 0; row < constants.size; row++) {
                 for (var col = 0; col < constants.size; col++) {
                     for (var next = 0; next < word.length; next++) {
-                        if (locations[row][col] === "") {
+                        if (alphabetSoup[row][col] === " ") {
                             break;
-                        } else if ((locations[row + next] === undefined || locations[row + next][col] === undefined || locations[row + next][col] === "") && locations[row][col] === 0) {
+                        } else if ((locations[row + next] === undefined || locations[row + next][col] === undefined || alphabetSoup[row + next][col] === " ") && locations[row][col] === 0) {
                             locations[row][col] = 1;
                             locationsToRemove.push(getIndex(row, col));
                             unavailable++;
@@ -243,9 +263,9 @@ function placeWord(word, direction, firstDirection) {
             for (var row = 0; row < constants.size; row++) {
                 for (var col = 0; col < constants.size; col++) {
                     for (var next = 0; next < word.length; next++) {
-                        if (locations[row][col] === "") {
+                        if (alphabetSoup[row][col] === " ") {
                             break;
-                        } else if ((locations[row - next] === undefined || locations[row - next][col] === undefined || locations[row - next][col] === "") && locations[row][col] === 0) {
+                        } else if ((locations[row - next] === undefined || locations[row - next][col] === undefined || alphabetSoup[row - next][col] === " ") && locations[row][col] === 0) {
                             locations[row][col] = 1;
                             locationsToRemove.push(getIndex(row, col));
                             unavailable++;
@@ -274,10 +294,13 @@ function init() {
     constants.words = constants.in.split(", ");
     constants.size = getSize();
     constants.area = constants.size * constants.size;
+    constants.empty = 0;
 
     // Orders the words so the longest words are placed first.
     constants.input = constants.words.sort((a, b) => b.length - a.length);
-    return generateArray();
+
+    var alphabetSoup = generateArray();
+    return generateShape(alphabetSoup);
 }
 
 function validateDifficulty() {
@@ -286,8 +309,7 @@ function validateDifficulty() {
     MEDIUM: Medium array and only directions 1 to 4.
     HARD: Big array and all directions.
     */
-    //const difficulty = readlineSync.question("Enter the desired difficulty: \n 0. EASY \n 1. MEDIUM \n 2. HARD \n");
-    const difficulty = "1";
+    const difficulty = readlineSync.question("Enter the desired difficulty: \n 0. EASY \n 1. MEDIUM \n 2. HARD \n");
     if ((difficulty !== "0" && difficulty !== "1" && difficulty !== "2")) {
         console.log("Please enter a valid argument.\n");
         return validateDifficulty();
@@ -308,9 +330,16 @@ function validateDifficulty() {
     }
 }
 
+function validateShape() {
+    config.shape = readlineSync.question("Enter the desired shape: \n 0. SQUARE \n 1. CIRCLE \n ");
+    if ((config.shape !== "0" && config.shape !== "1")) {
+        console.log("Please enter a valid argument.\n");
+        return validateShape();
+    }
+}
+
 function validateWords() {
-    //var words = readlineSync.question("Enter the words separated by comma and space, for example: HELLO, WORLD \n").toUpperCase();
-    var words = "BLACK, BLUE, RED";
+    var words = readlineSync.question("Enter the words separated by comma and space, for example: HELLO, WORLD \n").toUpperCase();
     const string = words.split(", ").join("");
     for (var index = 0; index < string.length; index++) {
         var found = false;
@@ -333,7 +362,6 @@ function validateWords() {
 
 const constants = {};
 const config = {};
-config.shape = "0";
 constants.directions = {left: [0, 2, 3], right: [4, 6, 7], up: [1, 2, 6], down: [3, 5, 7]};
 constants.alphabet = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"];
 const readlineSync = require('readline-sync');
@@ -341,10 +369,11 @@ const readlineSync = require('readline-sync');
 function main() {
     validateDifficulty();
     validateWords();
+    validateShape();
     var alphabetSoup = init();
 
     for (word = 0; word < constants.words.length; word++) {
-        parameters = placeWord(constants.words[word], undefined, undefined);
+        parameters = placeWord(constants.words[word], undefined, undefined, alphabetSoup);
 
         var error = placement(parameters, alphabetSoup);
         if (error === -1) {
