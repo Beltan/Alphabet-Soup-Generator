@@ -6,12 +6,12 @@ function main() {
     const readlineSync = require('readline-sync');
 
     function getIndex(row, col) {
-        return row * constants.size + col;
+        return row * constants.size.width + col;
     }
 
     function getLocation(index) {
-        var row = Math.trunc(index / constants.size);
-        var col = index % constants.size;
+        var row = Math.trunc(index / constants.size.width);
+        var col = index % constants.size.width;
         return {row, col};
     }
     
@@ -47,11 +47,11 @@ function main() {
                     break;
             }
         }
-        
+
         function validateShape() {
             //config.shape = "1";
-            config.shape = readlineSync.question("Enter the desired shape: \n 0. SQUARE \n 1. CIRCLE \n ");
-            if ((config.shape !== "0" && config.shape !== "1")) {
+            config.shape = readlineSync.question("Enter the desired shape: \n 0. SQUARE \n 1. CIRCLE \n 2. VERTICAL RECTANGLE \n 3. HORIZONTAL RECTANGLE \n ");
+            if ((config.shape !== "0" && config.shape !== "1" && config.shape !== "2" && config.shape !== "3")) {
                 console.log("Please enter a valid argument.\n");
                 return validateShape();
             }
@@ -87,9 +87,9 @@ function main() {
 
     // Initializes array to 0
     function generateArray() {
-        var array = Array(constants.size).fill(0);
-        for (var index = 0; index < constants.size; index++) {
-            array[index] = Array(constants.size).fill(0);
+        var array = Array(constants.size.height).fill(0);
+        for (var index = 0; index < constants.size.height; index++) {
+            array[index] = Array(constants.size.width).fill(0);
         }
         return array;
     }
@@ -104,9 +104,9 @@ function main() {
                     return false;
                 }
                 var remove = [];
-                const rad = Math.round(10 * (constants.size - 1) / 2) / 10;
-                for (var row = 0; row < constants.size; row++) {
-                    for (var col = 0; col < constants.size; col++) {
+                const rad = Math.round(10 * (constants.size.width - 1) / 2) / 10;
+                for (var row = 0; row < constants.size.width; row++) {
+                    for (var col = 0; col < constants.size.width; col++) {
                         if (!distance(row, col)) {
                             alphabetSoup[row][col] = " ";
                             constants.empty++;
@@ -121,12 +121,18 @@ function main() {
             /* Shapes
             0: Square
             1: Circle
+            2: Vertical rectangle
+            3: Horizontal rectangle
             */
             switch(config.shape) {
                 case "0":
                     return alphabetSoup;
                 case "1":
                     return circleShape();
+                case "2":
+                    return alphabetSoup;
+                case "3":
+                    return alphabetSoup;
             }
         }
     
@@ -139,19 +145,43 @@ function main() {
                     maxLength = constants.words[word].length;
                 }
             }
-            var size = Math.ceil(Math.sqrt(characters * config.size));
-            if (config.shape === '1') {
-                size = Math.round(2 * Math.sqrt(size * size / Math.PI));
+            var height = Math.ceil(Math.sqrt(characters * config.size));
+            switch(config.shape) {
+                case "0":
+                    if (height < maxLength) {
+                        height = maxLength;
+                    }
+                    var width = height;
+                    break;
+                case "1":
+                    height = Math.round(2 * Math.sqrt(height * height / Math.PI));
+                    if (height < maxLength) {
+                        height = maxLength;
+                    }
+                    var width = height;
+                    break;
+                case "2":
+                    height = Math.ceil(1.61 * height);
+                    if (height < maxLength) {
+                        height = maxLength;
+                    }
+                    var width = Math.ceil(0.62 * height);
+                    break;
+                case "3":
+                    var width = Math.ceil(1.61 * height);
+                    if (width < maxLength) {
+                        width = maxLength;
+                    }
+                    height = Math.ceil(0.62 * width);
+                    break;
             }
-            if (size < maxLength) {
-                size = maxLength;
-            }
-            return size;
+            return {height, width};
         }
-    
+        
+        constants.remove = [];
         constants.words = constants.in.split(", ");
         constants.size = getSize();
-        constants.area = constants.size * constants.size;
+        constants.area = constants.size.width * constants.size.height;
         constants.empty = 0;
     
         // Orders the words so the longest words are placed first.
@@ -195,8 +225,8 @@ function main() {
         // Marks all the impossible spots (out of the array limit)
         for (var index = 0; index < 3; index++) {
             if (constants.directions.left[index] === direction) {
-                for (var row = 0; row < constants.size; row++) {
-                    for (var col = 0; col < constants.size; col++) {
+                for (var row = 0; row < constants.size.height; row++) {
+                    for (var col = 0; col < constants.size.width; col++) {
                         for (var next = 0; next < word.length; next++) {
                             if (alphabetSoup[row][col] === " ") {
                                 break;
@@ -210,8 +240,8 @@ function main() {
                     }
                 }
             } else if (constants.directions.right[index] === direction) {
-                for (var row = 0; row < constants.size; row++) {
-                    for (var col = 0; col < constants.size; col++) {
+                for (var row = 0; row < constants.size.height; row++) {
+                    for (var col = 0; col < constants.size.width; col++) {
                         for (var next = 0; next < word.length; next++) {
                             if (alphabetSoup[row][col] === " ") {
                                 break;
@@ -225,8 +255,8 @@ function main() {
                     }
                 }
             } if (constants.directions.up[index] === direction) {
-                for (var row = 0; row < constants.size; row++) {
-                    for (var col = 0; col < constants.size; col++) {
+                for (var row = 0; row < constants.size.height; row++) {
+                    for (var col = 0; col < constants.size.width; col++) {
                         for (var next = 0; next < word.length; next++) {
                             if (alphabetSoup[row][col] === " ") {
                                 break;
@@ -240,8 +270,8 @@ function main() {
                     }
                 }
             } else if (constants.directions.down[index] === direction) {
-                for (var row = 0; row < constants.size; row++) {
-                    for (var col = 0; col < constants.size; col++) {
+                for (var row = 0; row < constants.size.height; row++) {
+                    for (var col = 0; col < constants.size.width; col++) {
                         for (var next = 0; next < word.length; next++) {
                             if (alphabetSoup[row][col] === " ") {
                                 break;
@@ -391,7 +421,7 @@ function main() {
     fill();
 
     // Output result
-    for (var row = 0; row < constants.size; row++) {
+    for (var row = 0; row < constants.size.height; row++) {
         console.log(alphabetSoup[row].join(" "));
     }
 }
